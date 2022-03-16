@@ -1,11 +1,12 @@
 import './style.css'
-
-import loadTexture from './utils/texture-loader.js'
+import loadTexture from './utils/texture-loader'
+import loadModel from "./utils/model-loader";
 import * as THREE from 'three'
+import RefractionMaterial from './refraction-material'
 
 class App {
 	constructor() {
-    this.render = this.render.bind(this);
+		this.render = this.render.bind(this)
 
 		// viewport object
 		this.vp = {
@@ -18,19 +19,16 @@ class App {
 	}
 
 	async setup() {
-    // Buffer where the video card draws pixels for a scene that is being rendered in the background
-    this.envFbo = new THREE.WebGLRenderTarget(
-      this.vp.width * this.vp.dpr,
-      this.vp.height * this.vp.dpr
-    );
+		// Buffer where the video card draws pixels for a scene that is being rendered in the background
+		this.envFbo = new THREE.WebGLRenderTarget(this.vp.width * this.vp.dpr, this.vp.height * this.vp.dpr)
 
-    // Create a new scene
+		// Create a new scene
 		this.scene = new THREE.Scene()
 
-    // Create an orthographic camera (see: https://cutt.ly/NA3Cyzv for a comparison with perspective)
+		// Create an orthographic camera (see: https://cutt.ly/NA3Cyzv for a comparison with perspective)
 		this.orthoCamera = new THREE.OrthographicCamera(this.vp.width / -2, this.vp.width / 2, this.vp.height / 2, this.vp.height / -2, 1, 1000)
 
-    // Create a perspective camera
+		// Create a perspective camera
 		this.camera = new THREE.PerspectiveCamera(50, this.vp.width / this.vp.height, 0.1, 1000)
 
 		// Move the camera to layer 1
@@ -51,31 +49,46 @@ class App {
 		// Add to the sceane
 		this.scene.add(this.quad)
 
-    // Render with antialiasing
+		this.refractionMaterial = new RefractionMaterial({
+			envMap: this.envFbo.texture,
+			resolution: [this.vp.width * this.vp.dpr, this.vp.height * this.vp.dpr]
+		})
+
+		let { model } = await loadModel('../diamond.glb')
+		model.children[0].material = this.refractionMaterial
+		
+		this.model = model.children[0]
+
+		this.scene.add(this.model);
+
+		// Render with antialiasing
 		this.renderer = new THREE.WebGLRenderer({ antialias: true })
 
-    // Scale in fullscreen (<=> 100vw, 100vh)
+		// Scale in fullscreen (<=> 100vw, 100vh)
 		this.renderer.setSize(this.vp.width, this.vp.height)
 
-    // Set the right depht pixel ration (eg. 2 on MacBook)
+		// Set the right depht pixel ration (eg. 2 on MacBook)
 		this.renderer.setPixelRatio(this.vp.dpr)
 
-    // Set if the renderer should automatically clear its output before rendering a frame
+		// Set if the renderer should automatically clear its output before rendering a frame
 		this.renderer.autoClear = false
 
-    // Adding the canvas to the HTML
+		// Adding the canvas to the HTML
 		document.body.appendChild(this.renderer.domElement)
 
 		console.log('INFO : ', 'Scene created.')
 
-    // Render with RequestAnimationFrame
+		this.camera.position.z = 5;
+    	this.orthoCamera.position.z = 5;
+
+		// Render with RequestAnimationFrame
 		this.render()
 	}
 
 	render() {
 		// RequestAnimationFrame(this.render)
 
-    // Tells the renderer to clear its color, depth or stencil drawing buffer(s)
+		// Tells the renderer to clear its color, depth or stencil drawing buffer(s)
 		this.renderer.clear()
 
 		// Render background to Fbo
@@ -88,7 +101,7 @@ class App {
 		this.renderer.clearDepth()
 
 		// Render geometry to screen
-		this.renderer.render(this.scene, this.camera)
+		// this.renderer.render(this.scene, this.camera)
 	}
 }
 
